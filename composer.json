@@ -1,0 +1,29 @@
+{
+    "name": "codesmith/first-americal-xml",
+    "description": "PHP wrapper for first american xml api",
+    "require": {
+        "guzzlehttp/guzzle": "5.3.*",
+        "fzaninotto/faker": "^1.5",
+        "illuminate/support": "^=5.1"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^5.1",
+        "vlucas/phpdotenv": "^2.2"
+    },
+    "authors": [
+        {
+            "name": "Ricky Delorier",
+            "email": "rdelorier@gmail.com"
+        }
+    ],
+    "autoload":{
+        "psr-4":{
+            "Codesmith\\FirstAmericanXml\\":"src/"
+        }
+    },
+    "autoload-dev": {
+        "classmap": [
+            "tests/TestCase.php"
+        ]
+    }
+}
