@@ -111,6 +111,28 @@ class Gateway
         ];
     }
 
+    /**
+     * Flatten transactions to indexed array.
+     *
+     * @param $transactions
+     *
+     * @return array
+     */
+    public function flattenTransactions($transactions)
+    {
+        $result = [];
+        $index  = 1;
+
+        foreach ($transactions as $transaction) {
+            foreach ($transaction as $key => $val) {
+                $result[$key . $index] = $val;
+            }
+            $index++;
+        }
+
+        return $result;
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Query Operations
@@ -120,15 +142,31 @@ class Gateway
     | date range.
     |
     */
-    public function query($args)
+    /**
+     * Query transactions database.
+     *
+     * @param $args
+     *
+     * @return Response
+     */
+    public function query($type, $begin = null, $end = null, $extra = [])
     {
-        $response = $this->send('Query', $args);
+        $response = $this->send('Query', [
+                'trans_type' => $type,
+                'begin_date' => $begin ?: date('mdy'),
+                'end_date'   => $end ?: date('mdy')
+            ] + $extra
+        );
 
         $result = [
-            'records_found' => (int)$response->records_found,
-            'status'        => (int)$response->status,
-            'error'         => (string)$response->error,
-            'transactions'  => []
+            'status'         => (int)$response->status,
+            'error'          => (string)$response->error,
+            'records_found'  => (int)$response->records_found,
+            'total_amount'   => (float)$response->records_found,
+            'total_settled'  => (float)$response->total_amount,
+            'total_credited' => (float)$response->records_found,
+            'total_net'      => (float)$response->total_net,
+            'transactions'   => []
         ];
 
         $result = $this->formatMultiRecordResponse(
@@ -330,7 +368,7 @@ class Gateway
      */
     public function cimDelete($refNum)
     {
-        $this->sendCim('cim_delete',[],$refNum);
+        $this->sendCim('cim_delete', [], $refNum);
     }
 
     /**
@@ -340,7 +378,7 @@ class Gateway
      */
     public function cimCreate($refNum)
     {
-        $this->sendCim('cim_insert',[],$refNum);
+        $this->sendCim('cim_insert', [], $refNum);
     }
 
     /**
@@ -351,7 +389,7 @@ class Gateway
      */
     public function cimEdit($refNum, $args)
     {
-        $this->sendCim('cim_edit',$args,$refNum);
+        $this->sendCim('cim_edit', $args, $refNum);
     }
 
     /*
@@ -366,13 +404,29 @@ class Gateway
     /**
      * Settle pending transactions.
      *
-     * @param $args
+     * @param string|array $transactions
+     * @param string $amount
      *
      * @return Response
      */
-    public function settle($args)
+    public function settle($transactions, $amount = null)
     {
-        $response = $this->send('settle', $args);
+        // this lets the developer pass in a ref number and amount
+        // if they are only settling a single transaction.
+        if (!is_null($amount)) {
+            $transactions = [
+                [
+                    'reference_number' => $transactions,
+                    'settle_amount'    => $amount
+                ]
+            ];
+        };
+
+        $request = [
+                'total_number_transactions' => count($transactions)
+            ] + $this->flattenTransactions($transactions);
+
+        $response = $this->send('settle', $request);
 
         $result = [
             'total_transactions_settled' => (int)$response->total_transactions_settled,
@@ -403,13 +457,33 @@ class Gateway
     /**
      * Credit previously settle transactions.
      *
-     * @param $args
+     * @param string|array $transactions
+     * @param string $amount
+     * @param string $fee
      *
      * @return Response
+     * @throws \Exception
+     *
      */
-    public function credit($args)
+    public function credit($transactions, $amount = null, $fee = '0.00')
     {
-        $response = $this->send('credit', $args);
+        if (!is_null($amount)) {
+            $transactions = [
+                [
+                    'reference_number' => $transactions,
+                    'credit_amount'    => $amount,
+                    'conv_fee'         => $fee,
+                ]
+            ];
+        } else if (!is_array($transactions)) {
+            throw new \Exception('Amount required when transactions is not an array');
+        }
+
+        $request = [
+                'total_number_transactions' => count($transactions)
+            ] + $this->flattenTransactions($transactions);
+
+        $response = $this->send('credit', $request);
 
         $result = [
             'total_transactions_credited' => (int)$response->total_transactions_credited,
@@ -446,9 +520,9 @@ class Gateway
      */
     public function recurringModify($refNum, $args, $isAch = 0)
     {
-        return $this->send('recurring_modify', $args+[
+        return $this->send('recurring_modify', $args + [
                 'reference_number' => $refNum,
-                'is_ach' => $isAch
+                'is_ach'           => $isAch
             ]);
     }
 
