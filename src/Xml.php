@@ -1,7 +1,7 @@
 <?php
 
 
-namespace Codesmith\FirstAmericanXml;
+namespace Delorier\FirstAmericanXml;
 
 
 class Xml

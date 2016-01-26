@@ -1,7 +1,7 @@
 <?php
 
 
-use Codesmith\FirstAmericanXml\Xml;
+use Delorier\FirstAmericanXml\Xml;
 
 class XmlTest extends TestCase
 {

@@ -1,6 +1,6 @@
 <?php
 
-namespace Codesmith\FirstAmericanXml;
+namespace Delorier\FirstAmericanXml;
 
 use GuzzleHttp\Message\ResponseInterface;
 use Illuminate\Support\Fluent;

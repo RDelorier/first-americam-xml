@@ -1,7 +1,7 @@
 <?php
 
 
-use Codesmith\FirstAmericanXml\Gateway;
+use Delorier\FirstAmericanXml\Gateway;
 
 class TestCase extends PHPUnit_Framework_TestCase
 {

@@ -1,9 +1,9 @@
 <?php
 
-namespace Codesmith\FirstAmericanXml;
+namespace Delorier\FirstAmericanXml;
 
-use Codesmith\FirstAmericanXml\CimQueryResponse;
-use Codesmith\FirstAmericanXml\VoidResponse;
+use Delorier\FirstAmericanXml\CimQueryResponse;
+use Delorier\FirstAmericanXml\VoidResponse;
 use GuzzleHttp\Client;
 
 /**
@@ -13,7 +13,7 @@ use GuzzleHttp\Client;
  * Follow the link below for api documentation.
  * http://www.goemerchant.com/content/pdfs/gatewayapi_dn_xml.pdf
  *
- * @package Codesmith\FirstAmericanXml
+ * @package Delorier\FirstAmericanXml
  */
 class Gateway
 {
