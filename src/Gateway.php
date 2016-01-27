@@ -86,6 +86,7 @@ class Gateway
         );
 
         $response->offsetSet('original_args', $args);
+
         return $response;
     }
 
@@ -145,75 +146,24 @@ class Gateway
     /**
      * Query transactions database.
      *
-     * @param $args
+     * @param string $type
+     * @param null|string $begin
+     * @param null|string $end
+     * @param array $extra
      *
-     * @return Response
+     * @return MultiTransactionResponse
+     *
      */
     public function query($type, $begin = null, $end = null, $extra = [])
     {
-        $response = $this->send('Query', [
-                'trans_type' => $type,
-                'begin_date' => $begin ?: date('mdy'),
-                'end_date'   => $end ?: date('mdy')
-            ] + $extra
+        return MultiTransactionResponse::make(
+            $this->send('Query', [
+                    'trans_type' => $type,
+                    'begin_date' => $begin ?: date('mdy'),
+                    'end_date'   => $end ?: date('mdy')
+                ] + $extra
+            )
         );
-
-        $result = [
-            'status'         => (int)$response->status,
-            'error'          => (string)$response->error,
-            'records_found'  => (int)$response->records_found,
-            'total_amount'   => (float)$response->records_found,
-            'total_settled'  => (float)$response->total_amount,
-            'total_credited' => (float)$response->records_found,
-            'total_net'      => (float)$response->total_net,
-            'transactions'   => []
-        ];
-
-        $result = $this->formatMultiRecordResponse(
-            $result,
-            [
-                'trans_type',
-                'trans_status',
-                'settled',
-                'credit_void',
-                'order_id',
-                'reference_number',
-                'trans_time',
-                'card_type',
-                'amount',
-                'amount_settled',
-                'amount_credited',
-                'posted_by',
-                'signature',
-                'error'
-            ],
-            $response,
-            $response['records_found']
-        );
-
-        return new Response($response->response, $result);
-    }
-
-    /**
-     * @param $result
-     * @param $keys
-     * @param $response
-     *
-     * @return mixed
-     */
-    private function formatMultiRecordResponse($result, $keys, $response, $recordCount)
-    {
-        foreach (range(1, $recordCount) as $i) {
-
-            $values = array_reduce($keys, function ($r, $key) use ($response, $i) {
-                $r[$key] = $response->get($key . "$i");
-                return $r;
-            }, []);
-
-            $result['transactions'][] = array_combine($keys, $values);
-        }
-
-        return $result;
     }
 
     /*
@@ -266,7 +216,7 @@ class Gateway
      *
      * @param array|string|int $transactions Either a single id of array of ids.
      *
-     * @return VoidResponse
+     * @return MultiTransactionResponse
      */
     public function void($transactions)
     {
@@ -280,21 +230,7 @@ class Gateway
             $fields['reference_number' . ($i + 1)] = $refNum;
         }
 
-        $response = $this->send('void', $fields);
-
-        $result = [
-            'total_transactions_voided' => (int)$response->total_transactions_voided,
-            'transactions'              => []
-        ];
-
-        $result = $this->formatMultiRecordResponse(
-            $result,
-            ['status', 'response', 'reference_number', 'error'],
-            $response,
-            count($response->original_args) - 1
-        );
-
-        return new Response($response->response, $result);
+        return MultiTransactionResponse::make($this->send('void', $fields));
     }
 
     /*
@@ -407,7 +343,7 @@ class Gateway
      * @param string|array $transactions
      * @param string $amount
      *
-     * @return Response
+     * @return MultiTransactionResponse
      */
     public function settle($transactions, $amount = null)
     {
@@ -426,23 +362,7 @@ class Gateway
                 'total_number_transactions' => count($transactions)
             ] + $this->flattenTransactions($transactions);
 
-        $response = $this->send('settle', $request);
-
-        $result = [
-            'total_transactions_settled' => (int)$response->total_transactions_settled,
-            'total_amount_settled'       => (int)$response->total_amount_settled,
-            'original_args'              => $response->original_args,
-            'transactions'               => []
-        ];
-
-        $result = $this->formatMultiRecordResponse(
-            $result,
-            ['status', 'response', 'reference_number', 'batch_number', 'settle_amount', 'error'],
-            $response,
-            $response->original_args['total_number_transactions']
-        );
-
-        return new Response($response->response, $result);
+        return MultiTransactionResponse::make($this->send('settle', $request));
     }
 
     /*
@@ -461,12 +381,13 @@ class Gateway
      * @param string $amount
      * @param string $fee
      *
-     * @return Response
+     * @return MultiTransactionResponse
      * @throws \Exception
      *
      */
     public function credit($transactions, $amount = null, $fee = '0.00')
     {
+        //todo sanitise amount
         if (!is_null($amount)) {
             $transactions = [
                 [
@@ -483,22 +404,7 @@ class Gateway
                 'total_number_transactions' => count($transactions)
             ] + $this->flattenTransactions($transactions);
 
-        $response = $this->send('credit', $request);
-
-        $result = [
-            'total_transactions_credited' => (int)$response->total_transactions_credited,
-            'original_args'               => $response->original_args,
-            'transactions'                => []
-        ];
-
-        $result = $this->formatMultiRecordResponse(
-            $result,
-            ['status', 'response', 'reference_number', 'credit_amount', 'error'],
-            $response,
-            $response->original_args['total_number_transactions']
-        );
-
-        return new Response($response->response, $result);
+        return MultiTransactionResponse::make($this->send('credit', $request));
     }
 
 
